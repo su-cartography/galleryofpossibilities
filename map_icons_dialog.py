@@ -1141,6 +1141,12 @@ class mapIconsDialog(QtWidgets.QDialog, FORM_CLASS):
                 return candidate
         return None
 
+    def _sync_format_from_radios(self):
+        """Keep use_svg_format aligned with the PNG/SVG radio buttons."""
+        self.use_svg_format = bool(
+            hasattr(self, "svgFormatRadio") and self.svgFormatRadio.isChecked()
+        )
+
     def _update_svg_format_toggle(self):
         """Enable or disable the SVG radio based on the selected icon."""
         if not hasattr(self, 'svgFormatRadio'):
@@ -1150,7 +1156,11 @@ class mapIconsDialog(QtWidgets.QDialog, FORM_CLASS):
             and Path(self.selected_icon_svg).is_file()
         )
         self.svgFormatRadio.setEnabled(has_svg)
-        if not has_svg and self.use_svg_format:
+        # Fall back to PNG when this icon has no SVG, even if the radio still
+        # shows SVG from a previous selection (dialog is reused across opens).
+        if not has_svg and (
+            self.use_svg_format or self.svgFormatRadio.isChecked()
+        ):
             self.use_svg_format = False
             if hasattr(self, 'pngFormatRadio'):
                 self.pngFormatRadio.setChecked(True)
@@ -1176,6 +1186,8 @@ class mapIconsDialog(QtWidgets.QDialog, FORM_CLASS):
         if hasattr(self, 'pngFormatRadio'):
             self.pngFormatRadio.setEnabled(True)
         self._update_svg_format_toggle()
+        # Re-read radios so a remembered SVG choice still applies after Cancel.
+        self._sync_format_from_radios()
         self.update_selected_icon_format()
         
         # Uncheck all other buttons (single selection)
@@ -1197,10 +1209,7 @@ class mapIconsDialog(QtWidgets.QDialog, FORM_CLASS):
         
     def on_format_changed(self):
         """Handle format radio button change (PNG/SVG)."""
-        if hasattr(self, 'svgFormatRadio') and self.svgFormatRadio.isChecked():
-            self.use_svg_format = True
-        else:
-            self.use_svg_format = False
+        self._sync_format_from_radios()
         self.update_selected_icon_format()
         
         # Update the icon preview in metadata panel to show the selected format
@@ -1443,12 +1452,15 @@ class mapIconsDialog(QtWidgets.QDialog, FORM_CLASS):
             return None
 
     def clear_selection(self):
-        """Clear the current icon selection and hide metadata panel."""
+        """Clear the current icon selection and hide metadata panel.
+
+        Keep the PNG/SVG radio choice so it is still applied when the dialog
+        is reused after Cancel.
+        """
         self.selected_icon = None
         self.selected_icon_png = None
         self.selected_icon_svg = None
         self.selected_icon_filename = None
-        self.use_svg_format = False
         
         # Uncheck all buttons
         for btn in self.icon_buttons:
