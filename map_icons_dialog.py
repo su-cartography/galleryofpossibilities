@@ -1251,28 +1251,6 @@ class mapIconsDialog(QtWidgets.QDialog, FORM_CLASS):
         svg_path = Path(svg_path)
         return _normalize_svg_markup(svg_path.read_text(encoding="utf-8"))
 
-    def _svg_stroke_width_mm(self, svg_path, size_mm):
-        """
-        Stroke width in mm that reproduces the SVG's designed stroke at size_mm.
-
-        QGIS substitutes param(outline-width) with the symbol layer's stroke
-        width, which is measured in millimetres. Scale it by the viewBox so
-        the map symbol matches the PNG.
-        """
-        try:
-            markup = Path(svg_path).read_text(encoding="utf-8")
-            view_box = re.search(r'viewBox\s*=\s*"([^"]+)"', markup)
-            design_width = re.search(r"param\(outline-width\)[,\s]+([0-9.]+)", markup)
-            if not view_box or not design_width:
-                return None
-            box_width = float(view_box.group(1).split()[2])
-            if box_width <= 0:
-                return None
-            return float(design_width.group(1)) * size_mm / box_width
-        except (OSError, ValueError, IndexError) as err:
-            logging.warning(f"Could not derive stroke width for {svg_path}: {err}")
-            return None
-
     def _render_svg_to_pixmap(self, svg_path, target_size=None):
         """
         Render an SVG file to a QPixmap for preview purposes.
@@ -1425,14 +1403,12 @@ class mapIconsDialog(QtWidgets.QDialog, FORM_CLASS):
             
             if is_svg and icon_path_obj.exists():
                 # Pass the original markup. QGIS reads param(outline) /
-                # param(outline-width) straight from the file to decide
-                # whether stroke colour and width are editable in Symbology.
+                # param(outline-width) straight from the file to decide whether
+                # stroke colour and width are editable in Symbology. setPath()
+                # (called by the constructor) applies the width default.
                 logging.info(f"✓ Using SVG format: {icon_path_str}")
                 svg_layer = QgsSvgMarkerSymbolLayer(icon_path_str)
-                svg_layer.setSize(6)
-                stroke_width = self._svg_stroke_width_mm(icon_path_obj, 6)
-                if stroke_width is not None:
-                    svg_layer.setStrokeWidth(stroke_width)
+                svg_layer.setSize(6) # set the height of the icon (in mm)
                 symbol.changeSymbolLayer(0, svg_layer)
             else:
                 # Use raster marker symbol layer for PNG
