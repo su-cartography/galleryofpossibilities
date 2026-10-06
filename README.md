@@ -121,6 +121,32 @@ python test/test_plugin_core.py
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for the full workflow.
 
+## Publishing a new version to QGIS
+
+Use these steps when uploading a new version to [plugins.qgis.org](https://plugins.qgis.org).
+
+1. **Update the version** in `metadata.txt` (for example `1.0.0` to `1.0.1`). Each upload needs a new version number.
+2. **Make a clean copy** of the plugin folder named `galleryofpossibilities`.
+3. **Remove files that should not be uploaded:**
+   - `__pycache__/`, `.pytest_cache/`, `cache/`
+   - `test/`, `.git/`, `.github/`, `.gitignore`
+   - `help/`, `scripts/` (optional leftovers though safe to remove)
+   - `LICENSE.md` (keep the plain `LICENSE` file)
+4. **Keep these files:**
+   - `__init__.py`, `map_icons.py`, `map_icons_dialog.py`, `map_icons_dialog_base.ui`
+   - `data_manager.py`, `config.py`, `metadata.txt`, `icon.png`, `LICENSE`
+5. **Zip the folder** so the zip contains `galleryofpossibilities/...` .
+6. **Optional check before upload:** run Bandit on the folder you will zip, and skip `test/`:
+   ```bash
+   pip install bandit
+   bandit -r . -x ./test,./.pytest_cache,./.git,./.github
+   ```
+   This will confirm that there will be no issues on QGIS locally.
+7. Sign in at [plugins.qgis.org](https://plugins.qgis.org), open the plugin page, and choose **Add version**.
+8. Upload the zip and wait for the security scan to finish.
+
+If the scan fails, fix the reported issue, bump the version again if needed, rebuild the zip, and upload a new version.
+
 ## Contact
 
 - **Issues**: [github.com/su-cartography/QGIS-icon-plugin/issues](https://github.com/su-cartography/QGIS-icon-plugin/issues)
